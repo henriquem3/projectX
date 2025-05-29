@@ -38,7 +38,13 @@ class Player:
 
     def update(self, platforms):
         self.handle_input()
+
+        # ——> trava o X do jogador dentro de [0, 800-width]
+        if self.rect.left  < 0:             self.rect.left  = 0
+        if self.rect.right > 800:           self.rect.right = 800
+
         self.apply_gravity(platforms)
+
 
     def draw(self, surface):
         pygame.draw.rect(surface, (255, 0, 0), self.rect)  # player em vermelho
