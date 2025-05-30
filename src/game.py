@@ -32,6 +32,11 @@ def main():
         # atualiza inimigo
         enemy.update()
 
+        # checa colisão
+        if player.rect.colliderect(enemy.rect):
+            print("Game Over! Colisão jogador-inimigo.")
+            running = False
+
         # Desenha tudo
         screen.fill((100, 149, 237))
         # plataforma
