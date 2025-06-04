@@ -16,7 +16,7 @@ def main():
     pygame.display.set_caption("My Platformer")
     clock = pygame.time.Clock()
 
-    # 1) Configuração do nível atual
+    # --- CONFIGURAÇÃO FIXA DO NÍVEL ---
     platforms_config = [
         {'x': 0,   'y': 550, 'width': 800, 'height': 50,  'collide_bottom': True},  # chão
         {'x': 200, 'y': 450, 'width': 100, 'height': 20,  'collide_bottom': False}, # one-way
@@ -28,14 +28,17 @@ def main():
     ]
     player_spawn = (100, 500)
 
-    # 1.1) Define a "chegada" (área de vitória)
-    # Por exemplo, um quadrado 50×50 em (750, 500)
+    # Área de chegada
     finish_rect = Rect(750, 500, 50, 50)
 
-    # 2) Cria Level e Player
-    level = Level(platforms_config, enemies_config)
-    player = Player(player_spawn[0], player_spawn[1], lives=3)
+    def spawn_level_and_player():
+        """Cria e retorna um novo Level e Player com as configurações iniciais."""
+        lvl = Level(platforms_config, enemies_config)
+        ply = Player(player_spawn[0], player_spawn[1], lives=3)
+        return lvl, ply
 
+    # --- ESTADO DE JOGO ---
+    level, player = spawn_level_and_player()
     game_over = False
     victory = False
 
@@ -45,12 +48,20 @@ def main():
                 pygame.quit()
                 sys.exit()
 
+            # Se estiver em Game Over ou Victory, permitir restart com R
+            if event.type == pygame.KEYDOWN and (game_over or victory):
+                if event.key == pygame.K_r:
+                    # Reset total: recria nível e player e zera flags
+                    level, player = spawn_level_and_player()
+                    game_over = False
+                    victory = False
+
         if not game_over and not victory:
-            # Atualiza lógica de player e level
+            # --- LÓGICA NORMAL ---
             player.update(level.platforms)
             level.update()
 
-            # Verifica colisão com inimigos
+            # Colisão jogador-inimigo
             for enemy in level.enemies:
                 if player.rect.colliderect(enemy.rect):
                     player.lose_life()
@@ -61,26 +72,31 @@ def main():
                         player.reset()
                     break
 
-            # Verifica colisão com a área de chegada
+            # Colisão com área de chegada
             if player.rect.colliderect(finish_rect):
                 victory = True
 
-        # Desenha a cena
+        # --- DESENHO ---
         screen.fill((100, 149, 237))
         level.draw(screen)
 
-        # Desenha a área de chegada (por exemplo, cor amarela)
+        # Desenha área de chegada
         pygame.draw.rect(screen, (255, 215, 0), finish_rect)
 
         player.draw(screen)
 
-        # HUD: vidas
+        # HUD de vidas
         draw_text(screen, f"Vidas: {player.lives}", 36, 10, 10)
 
+        # Mensagens de fim
         if game_over:
             draw_text(screen, "GAME OVER", 72, 800//2 - 180, 600//2 - 36, (255, 50, 50))
+            draw_text(screen, "Pressione R para reiniciar", 36,
+                      800//2 - 180, 600//2 + 40, (255, 255, 255))
         elif victory:
             draw_text(screen, "YOU WIN!", 72, 800//2 - 150, 600//2 - 36, (50, 255, 50))
+            draw_text(screen, "Pressione R para jogar novamente", 36,
+                      800//2 - 200, 600//2 + 40, (255, 255, 255))
 
         pygame.display.flip()
         clock.tick(60)
