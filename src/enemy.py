@@ -3,12 +3,14 @@
 import pygame
 
 class Enemy:
-    def __init__(self, x, y, width=50, height=50, speed=2, patrol_width=200):
+    def __init__(self, x, y, width=50, height=50,
+                 speed=2, patrol_width=150, killable=False):
         """
         x, y            → posição inicial (top-left)
-        width, height   → tamanho do inimigo
+        width, height   → tamanho
         speed           → pixels por frame
-        patrol_width    → distância total de patrulha a partir de x
+        patrol_width    → distância de patrulha a partir de x
+        killable        → se True, morre quando o jogador pular por cima
         """
         self.start_x = x
         self.rect = pygame.Rect(x, y, width, height)
@@ -16,11 +18,15 @@ class Enemy:
         self.direction = 1   # 1 → direita, -1 → esquerda
         self.patrol_width = patrol_width
 
-    def update(self):
-        # Move na direção atual
-        self.rect.x += self.speed * self.direction
+        self.killable = killable
+        self.alive = True
 
-        # Se ultrapassar a região de patrulha, inverte direção
+    def update(self):
+        """Só patrulha se estiver vivo."""
+        if not self.alive:
+            return
+
+        self.rect.x += self.speed * self.direction
         if self.rect.x > self.start_x + self.patrol_width:
             self.rect.x = self.start_x + self.patrol_width
             self.direction = -1
@@ -29,5 +35,15 @@ class Enemy:
             self.direction = 1
 
     def draw(self, surface):
-        # Desenha um retângulo azul
-        pygame.draw.rect(surface, (0, 0, 255), self.rect)
+        """Desenha só se alive."""
+        if not self.alive:
+            return
+
+        color = (0, 0, 255) if not self.killable else (255, 0, 255)
+        # Azul para invencível, magenta para killable (só p/ debug)
+        pygame.draw.rect(surface, color, self.rect)
+
+    def kill(self):
+        """Mata o inimigo (não será mais desenhado ou atualizado)."""
+        self.alive = False
+        # Opcional: reposicionar fora da tela ou tocar som aqui
