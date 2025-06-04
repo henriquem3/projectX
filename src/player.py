@@ -29,12 +29,23 @@ class Player:
             self.on_ground = False
 
     def apply_gravity(self, platforms):
+        """
+        Aplica gravidade e resolve colisões verticais
+        apenas quando o jogador está vindo de CIMA da plataforma.
+        """
+        # 1) Guarde onde o fundo do jogador estava antes da movimentação vertical
+        previous_bottom = self.rect.bottom
+
+        # 2) Aplique gravidade e mova no eixo Y
         self.vel_y += self.gravity
         self.rect.y += self.vel_y
 
+        # 3) Para cada plataforma, verifique colisão
         for plat in platforms:
             if self.rect.colliderect(plat):
-                if self.vel_y > 0:
+                # Se estiver caindo E anteriormente (antes de mover) o fundo estava acima do topo:
+                if self.vel_y > 0 and previous_bottom <= plat.top:
+                    # Colide por cima: “pousa” no topo da plataforma
                     self.rect.bottom = plat.top
                     self.vel_y = 0
                     self.on_ground = True
