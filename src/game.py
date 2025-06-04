@@ -1,5 +1,3 @@
-# src/game.py
-
 import pygame
 import sys
 from pygame import Rect
@@ -19,25 +17,27 @@ def main():
     clock = pygame.time.Clock()
 
     # 1) Configuração do nível atual
-    # + Plataformas (note o 'collide_bottom' para solid platforms)
     platforms_config = [
-        {'x': 0,   'y': 550, 'width': 800, 'height': 50,  'collide_bottom': True},  # chão sólido
+        {'x': 0,   'y': 550, 'width': 800, 'height': 50,  'collide_bottom': True},  # chão
         {'x': 200, 'y': 450, 'width': 100, 'height': 20,  'collide_bottom': False}, # one-way
-        {'x': 400, 'y': 450, 'width': 150, 'height': 20,  'collide_bottom': True},  # plataforma sólida
+        {'x': 400, 'y': 350, 'width': 150, 'height': 20,  'collide_bottom': True},  # sólida
     ]
-    # + Inimigos
     enemies_config = [
         {'x': 300, 'y': 500, 'speed': 3, 'patrol_width': 150},
         {'x': 600, 'y': 500, 'speed': 2, 'patrol_width': 100},
     ]
-    # + Spawn do player
     player_spawn = (100, 500)
+
+    # 1.1) Define a "chegada" (área de vitória)
+    # Por exemplo, um quadrado 50×50 em (750, 500)
+    finish_rect = Rect(750, 500, 50, 50)
 
     # 2) Cria Level e Player
     level = Level(platforms_config, enemies_config)
     player = Player(player_spawn[0], player_spawn[1], lives=3)
 
     game_over = False
+    victory = False
 
     while True:
         for event in pygame.event.get():
@@ -45,7 +45,7 @@ def main():
                 pygame.quit()
                 sys.exit()
 
-        if not game_over:
+        if not game_over and not victory:
             # Atualiza lógica de player e level
             player.update(level.platforms)
             level.update()
@@ -61,9 +61,17 @@ def main():
                         player.reset()
                     break
 
+            # Verifica colisão com a área de chegada
+            if player.rect.colliderect(finish_rect):
+                victory = True
+
         # Desenha a cena
         screen.fill((100, 149, 237))
         level.draw(screen)
+
+        # Desenha a área de chegada (por exemplo, cor amarela)
+        pygame.draw.rect(screen, (255, 215, 0), finish_rect)
+
         player.draw(screen)
 
         # HUD: vidas
@@ -71,6 +79,8 @@ def main():
 
         if game_over:
             draw_text(screen, "GAME OVER", 72, 800//2 - 180, 600//2 - 36, (255, 50, 50))
+        elif victory:
+            draw_text(screen, "YOU WIN!", 72, 800//2 - 150, 600//2 - 36, (50, 255, 50))
 
         pygame.display.flip()
         clock.tick(60)
