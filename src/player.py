@@ -1,14 +1,18 @@
+# src/player.py
+
 import pygame
 
 class Player:
     def __init__(self, x, y, width=50, height=50,
                  speed=5, jump_strength=12, lives=3):
-        # posição inicial de respawn
+        # posição inicial para respawn
         self.initial_x = x
         self.initial_y = y
 
-        # componente gráfico e física
+        # retângulo de colisão/desenho
         self.rect = pygame.Rect(x, y, width, height)
+
+        # movimento e física
         self.speed = speed
         self.jump_strength = jump_strength
         self.vel_y = 0
@@ -24,35 +28,55 @@ class Player:
             self.rect.x -= self.speed
         if keys[pygame.K_RIGHT]:
             self.rect.x += self.speed
-        if (keys[pygame.K_SPACE] or keys[pygame.K_UP])  and self.on_ground:
+        if (keys[pygame.K_SPACE] or keys[pygame.K_UP]) and self.on_ground:
             self.vel_y = -self.jump_strength
             self.on_ground = False
 
     def apply_gravity(self, platforms):
         """
         Aplica gravidade e resolve colisões verticais
-        apenas quando o jogador está vindo de CIMA da plataforma.
+        considerando 'one-way' ou 'solid' conforme plataforma.collide_bottom.
         """
-        # 1) Guarde onde o fundo do jogador estava antes da movimentação vertical
+        # 1) Salva posições anteriores
         previous_bottom = self.rect.bottom
+        previous_top    = self.rect.top
 
-        # 2) Aplique gravidade e mova no eixo Y
+        # 2) Aplica gravidade
         self.vel_y += self.gravity
         self.rect.y += self.vel_y
 
-        # 3) Para cada plataforma, verifique colisão
+        # 3) Para cada plataforma, verifica colisão vertical
         for plat in platforms:
-            if self.rect.colliderect(plat):
-                # Se estiver caindo E anteriormente (antes de mover) o fundo estava acima do topo:
-                if self.vel_y > 0 and previous_bottom <= plat.top:
-                    # Colide por cima: “pousa” no topo da plataforma
-                    self.rect.bottom = plat.top
+            # Se estiver caindo (vel_y > 0), checa colisão por cima
+            if self.vel_y > 0:
+                # Só pousa se a base estivesse acima do topo e agora cruza por baixo
+                if (previous_bottom <= plat.rect.top and
+                    self.rect.bottom >= plat.rect.top and
+                    self.rect.right > plat.rect.left and
+                    self.rect.left < plat.rect.right):
+                    
+                    # Snap: coloca a base exatamente no topo da plataforma
+                    self.rect.bottom = plat.rect.top
                     self.vel_y = 0
                     self.on_ground = True
 
+            # Se estiver subindo e a plataforma bloqueia por baixo, checa colisão por baixo
+            elif self.vel_y < 0 and plat.collide_bottom:
+                # Só ‘bate a cabeça’ se a parte de cima do player bater na base da plataforma
+                if (previous_top >= plat.rect.bottom and
+                    self.rect.top <= plat.rect.bottom and
+                    self.rect.right > plat.rect.left and
+                    self.rect.left < plat.rect.right):
+                    
+                    # Snap: coloca o topo logo abaixo da base da plataforma
+                    self.rect.top = plat.rect.bottom
+                    self.vel_y = 0
+                    # on_ground permanece False, pois ele continua no ar
+
     def update(self, platforms):
         self.handle_input()
-        # mantém player dentro da tela (0 a 800px)
+
+        # Mantém player dentro da largura da tela (0 a 800)
         if self.rect.left < 0:
             self.rect.left = 0
         if self.rect.right > 800:

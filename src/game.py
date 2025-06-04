@@ -18,20 +18,23 @@ def main():
     pygame.display.set_caption("My Platformer")
     clock = pygame.time.Clock()
 
-    # 1) Defina as plataformas e inimigos para o nível atual
-    platforms = [
-        Rect(0, 550, 800, 50),     # chão
-        Rect(200, 450, 100, 20),   # plataforma intermediária
-        Rect(400, 350, 150, 20),   # outra plataforma
+    # 1) Configuração do nível atual
+    # + Plataformas (note o 'collide_bottom' para solid platforms)
+    platforms_config = [
+        {'x': 0,   'y': 550, 'width': 800, 'height': 50,  'collide_bottom': True},  # chão sólido
+        {'x': 200, 'y': 450, 'width': 100, 'height': 20,  'collide_bottom': False}, # one-way
+        {'x': 400, 'y': 450, 'width': 150, 'height': 20,  'collide_bottom': True},  # plataforma sólida
     ]
+    # + Inimigos
     enemies_config = [
         {'x': 300, 'y': 500, 'speed': 3, 'patrol_width': 150},
         {'x': 600, 'y': 500, 'speed': 2, 'patrol_width': 100},
     ]
+    # + Spawn do player
     player_spawn = (100, 500)
 
-    # 2) Crie instâncias de Level e Player
-    level = Level(platforms, enemies_config)
+    # 2) Cria Level e Player
+    level = Level(platforms_config, enemies_config)
     player = Player(player_spawn[0], player_spawn[1], lives=3)
 
     game_over = False
@@ -43,40 +46,31 @@ def main():
                 sys.exit()
 
         if not game_over:
-            # Atualiza lógica do player e do nível
+            # Atualiza lógica de player e level
             player.update(level.platforms)
             level.update()
 
-            # Verifica colisão com qualquer inimigo
+            # Verifica colisão com inimigos
             for enemy in level.enemies:
                 if player.rect.colliderect(enemy.rect):
                     player.lose_life()
                     if player.lives <= 0:
                         game_over = True
                     else:
-                        # ainda tem vidas: reseta inimigos e player
                         level.reset_enemies()
                         player.reset()
-                    break  # sai do for assim que colidiu
+                    break
 
-        # Desenha cena inteira
+        # Desenha a cena
         screen.fill((100, 149, 237))
         level.draw(screen)
         player.draw(screen)
 
-        # HUD: número de vidas
+        # HUD: vidas
         draw_text(screen, f"Vidas: {player.lives}", 36, 10, 10)
 
         if game_over:
-            # Mensagem de Game Over no centro da tela
-            draw_text(
-                screen,
-                "GAME OVER",
-                72,
-                800//2 - 180,
-                600//2 - 36,
-                color=(255, 50, 50)
-            )
+            draw_text(screen, "GAME OVER", 72, 800//2 - 180, 600//2 - 36, (255, 50, 50))
 
         pygame.display.flip()
         clock.tick(60)

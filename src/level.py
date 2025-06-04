@@ -1,18 +1,30 @@
 # src/level.py
 
 import pygame
+from platform import Platform # type: ignore
 from enemy import Enemy
 
 class Level:
-    def __init__(self, platforms, enemies_config):
+    def __init__(self, platforms_config, enemies_config):
         """
-        platforms: lista de pygame.Rect representando chão/blocos.
-        enemies_config: lista de dicionários com chaves:
+        platforms_config: lista de dicionários com chaves
+            'x', 'y', 'width', 'height', 'collide_bottom' (opcional, default=False)
+        enemies_config: lista de dicionários com chaves
             'x', 'y', 'speed', 'patrol_width'
         """
-        self.platforms = platforms
+        # Cria instâncias de Platform
+        self.platforms = []
+        for cfg in platforms_config:
+            p = Platform(
+                x=cfg['x'],
+                y=cfg['y'],
+                width=cfg['width'],
+                height=cfg['height'],
+                collide_bottom=cfg.get('collide_bottom', False)
+            )
+            self.platforms.append(p)
 
-        # Cria instâncias de Enemy a partir da configuração
+        # Cria instâncias de Enemy
         self.enemies = []
         for cfg in enemies_config:
             e = Enemy(
@@ -30,12 +42,12 @@ class Level:
 
     def draw(self, surface):
         """
-        Desenha as plataformas e os inimigos na surface informada.
-        Plataformas são retângulos verdes, inimigos retângulos azuis.
+        Desenha as plataformas (verde ou marrom) e inimigos (azul).
         """
         # Desenha plataformas
         for plat in self.platforms:
-            pygame.draw.rect(surface, (0, 200, 0), plat)
+            plat.draw(surface)
+
         # Desenha inimigos
         for enemy in self.enemies:
             enemy.draw(surface)
@@ -43,7 +55,6 @@ class Level:
     def reset_enemies(self):
         """
         Reposiciona cada inimigo de volta ao X inicial e reinicia direção.
-        (útil quando o player perde vida)
         """
         for enemy in self.enemies:
             enemy.rect.x = enemy.start_x
