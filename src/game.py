@@ -1,7 +1,11 @@
+# src/game.py
+
 import pygame
 import sys
+from pygame import Rect
+
 from player import Player
-from enemy import Enemy
+from level import Level
 
 def draw_text(surface, text, size, x, y, color=(255,255,255)):
     font = pygame.font.SysFont(None, size)
@@ -14,11 +18,21 @@ def main():
     pygame.display.set_caption("My Platformer")
     clock = pygame.time.Clock()
 
-    # pontos de spawn e entidades
-    player = Player(100, 400, lives=3)
-    ground = pygame.Rect(0, 550, 800, 50)
-    platforms = [ground]
-    enemy = Enemy(300, 500, speed=3, patrol_width=200)
+    # 1) Defina as plataformas e inimigos para o nível atual
+    platforms = [
+        Rect(0, 550, 800, 50),     # chão
+        Rect(200, 450, 100, 20),   # plataforma intermediária
+        Rect(400, 350, 150, 20),   # outra plataforma
+    ]
+    enemies_config = [
+        {'x': 300, 'y': 500, 'speed': 3, 'patrol_width': 150},
+        {'x': 600, 'y': 500, 'speed': 2, 'patrol_width': 100},
+    ]
+    player_spawn = (100, 500)
+
+    # 2) Crie instâncias de Level e Player
+    level = Level(platforms, enemies_config)
+    player = Player(player_spawn[0], player_spawn[1], lives=3)
 
     game_over = False
 
@@ -29,29 +43,40 @@ def main():
                 sys.exit()
 
         if not game_over:
-            # lógica de jogo normal
-            player.update(platforms)
-            enemy.update()
+            # Atualiza lógica do player e do nível
+            player.update(level.platforms)
+            level.update()
 
-            # colisão
-            if player.rect.colliderect(enemy.rect):
-                player.lose_life()
-                if player.lives <= 0:
-                    game_over = True
+            # Verifica colisão com qualquer inimigo
+            for enemy in level.enemies:
+                if player.rect.colliderect(enemy.rect):
+                    player.lose_life()
+                    if player.lives <= 0:
+                        game_over = True
+                    else:
+                        # ainda tem vidas: reseta inimigos e player
+                        level.reset_enemies()
+                        player.reset()
+                    break  # sai do for assim que colidiu
 
-        # desenho
+        # Desenha cena inteira
         screen.fill((100, 149, 237))
-        pygame.draw.rect(screen, (0, 200, 0), ground)
-        enemy.draw(screen)
+        level.draw(screen)
         player.draw(screen)
 
-        # vidas na tela (HUD)
+        # HUD: número de vidas
         draw_text(screen, f"Vidas: {player.lives}", 36, 10, 10)
 
         if game_over:
-            # mensagem centralizada de Game Over
-            draw_text(screen, "GAME OVER", 72,
-                      800//2 - 180, 600//2 - 36, color=(255,50,50))
+            # Mensagem de Game Over no centro da tela
+            draw_text(
+                screen,
+                "GAME OVER",
+                72,
+                800//2 - 180,
+                600//2 - 36,
+                color=(255, 50, 50)
+            )
 
         pygame.display.flip()
         clock.tick(60)
