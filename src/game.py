@@ -25,7 +25,8 @@ def draw_text(surface, text, size, x, y, color=(255,255,255)):
 def format_time(seconds):
     m = int(seconds // 60)
     s = int(seconds % 60)
-    return f"{m:02d}:{s:02d}"
+    cs = int((seconds - int(seconds)) * 100)
+    return f"{m:02d}:{s:02d}:{cs:02d}"
 
 # ——————————————————————————————————————————
 def main():
@@ -41,9 +42,11 @@ def main():
     # — Estado de pontuação e timer
     score = 0
     start_ticks = None
+    phase_start_ticks = None
     final_score = None
     final_multiplier = 1.0
     final_time = None
+
 
     # — Local de spawn fixo do player
     player_spawn = (100, 500)
@@ -92,6 +95,8 @@ def main():
         }
     ]
 
+    phase_times = [0] * len(phases)
+
     def spawn_phase(idx):
         cfg = phases[idx]
         world_w = cfg['world_w']  
@@ -135,6 +140,7 @@ def main():
                         level, player, finish_rect = spawn_phase(current_phase)
                         score = 100
                         start_ticks = pygame.time.get_ticks()
+                        phase_start_ticks = start_ticks
                         final_score = None
                         final_multiplier = 1.0
                         final_time = None
@@ -195,14 +201,18 @@ def main():
                             state = GameState.GAME_OVER
                         else:
                             # reset timer e score ao perder vida
-                            start_ticks = pygame.time.get_ticks()
-                            score = 100
+                            # start_ticks = pygame.time.get_ticks()
+                            if (score - 100) >= 100:
+                                score = score -100
+                            else: 
+                                score = 100 
                             level.reset_enemies()
                             player.reset()
                     break
 
             # colisão com chegada
             if player.rect.colliderect(finish_rect):
+                phase_times[current_phase] = (pygame.time.get_ticks() - phase_start_ticks) / 1000
                 # grava tempo final e aplica multiplicador
                 if start_ticks is not None:
                     elapsed = (pygame.time.get_ticks() - start_ticks) / 1000
@@ -213,10 +223,13 @@ def main():
 
                 # avança para a próxima fase ou vitória final
                 if current_phase + 1 < len(phases):
+                    old_lives = player.lives
                     current_phase += 1
                     level, player, finish_rect = spawn_phase(current_phase)
-                    score = 100
-                    start_ticks = pygame.time.get_ticks()
+                    #score = 100
+                    #start_ticks = pygame.time.get_ticks()
+                    phase_start_ticks = pygame.time.get_ticks()
+                    player.lives = old_lives + 1
                     state = GameState.PLAYING
                 else:
                     state = GameState.VICTORY
@@ -263,8 +276,13 @@ def main():
             draw_text(screen, f"Vidas: {player.lives}", 24, 10, 10)
             draw_text(screen, f"Pontos: {score}", 24, 10, 40)
             if start_ticks is not None:
-                elapsed_sec = (pygame.time.get_ticks() - start_ticks) / 1000
-                draw_text(screen, f"Tempo: {format_time(elapsed_sec)}", 24, W - 140, 10)
+                total_sec = (pygame.time.get_ticks() - start_ticks) / 1000
+                draw_text(screen, f"Tempo Total: {format_time(total_sec)}", 24, 10, 70)
+            # tempo de fase
+            if phase_start_ticks is not None:
+                phase_sec = (pygame.time.get_ticks() - phase_start_ticks) / 1000
+                draw_text(screen, f"Tempo Fase: {format_time(phase_sec)}", 24, 10, 100)
+
 
         elif state == GameState.PAUSED:
             screen.fill((30, 30, 30))
@@ -295,7 +313,13 @@ def main():
                 draw_text(screen,
                           f"Tempo Final: {format_time(final_time)}",
                           36, 220, 320)
-            draw_text(screen, "Press R to return to Menu", 36, 220, 400)
+                # exibe cada tempo de fase num loop
+                for i, t in enumerate(phase_times):
+                    draw_text(screen,
+                              f"Tempo Fase {i+1}: {format_time(t)}",
+                              36, 220, 360 + i*40)
+            y_press_r = 360 + len(phase_times) * 40 + 20
+            draw_text(screen, f"Press R to return to Menu", 36, 220, y_press_r)
 
         pygame.display.flip()
         clock.tick(60)
