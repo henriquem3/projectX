@@ -1,3 +1,5 @@
+# main.py
+
 import pygame
 import sys
 from enum import Enum
@@ -37,45 +39,74 @@ def main():
     LEVEL_TIME_LIMIT = 120
 
     # — Estado de pontuação e timer
-    score = 0               # pontos brutos acumulados
-    start_ticks = None      # quando começou a vida atual
-    final_score = None      # resultado após multiplicador
+    score = 0
+    start_ticks = None
+    final_score = None
     final_multiplier = 1.0
-    final_time = None       # tempo decorrido da última tentativa
+    final_time = None
 
-    # — Mundo 5× largo, mesmas configs de Level/Player/Finish
-    world_w = W * 5
-
-    platforms_cfg = [
-        {'x': 0,    'y':550,'width':world_w,'height':50, 'collide_bottom':True},
-        {'x': 300,  'y':450,'width':100,       'height':20, 'collide_bottom':False},
-        {'x': 800,  'y':400,'width':150,       'height':20, 'collide_bottom':True},
-        {'x': 1400, 'y':350,'width':200,       'height':20, 'collide_bottom':False},
-        {'x': 2000, 'y':450,'width':120,       'height':20, 'collide_bottom':True},
-        {'x': 2800, 'y':300,'width':180,       'height':20, 'collide_bottom':False},
-        {'x': 3500, 'y':400,'width':150,       'height':20, 'collide_bottom':True},
-    ]
-    enemies_cfg = [
-        {'x': 500,  'y':500,'speed':3,'patrol_width':200,'killable':True},
-        {'x': 1100, 'y':500,'speed':2,'patrol_width':150,'killable':False},
-        {'x': 1900, 'y':500,'speed':3,'patrol_width':100,'killable':True},
-        {'x': 2600, 'y':500,'speed':2,'patrol_width':200,'killable':False},
-        {'x': 3300, 'y':500,'speed':3,'patrol_width':150,'killable':True},
-    ]
+    # — Local de spawn fixo do player
     player_spawn = (100, 500)
-    finish_rect  = Rect(world_w - 50, 500, 50, 50)
 
-    def spawn_level_and_player():
-        lvl = Level(platforms_cfg, enemies_cfg)
-        ply = Player(player_spawn[0], player_spawn[1], lives=3)
-        return lvl, ply
+    # —–––––––––––––––––––––––––––––
+    # Configs de todas as fases
+    # ––––––––––––––––––––––––––––––
+    phases = [
+        {
+            'world_w': W * 5,
+            'platforms': [
+                {'x': 0,    'y':550,'width':W*5,'height':50, 'collide_bottom':True},
+                {'x': 300,  'y':450,'width':100, 'height':20, 'collide_bottom':False},
+                {'x': 800,  'y':400,'width':150, 'height':20, 'collide_bottom':True},
+                {'x': 1400, 'y':350,'width':200, 'height':20, 'collide_bottom':False},
+                {'x': 2000, 'y':450,'width':120, 'height':20, 'collide_bottom':True},
+                {'x': 2800, 'y':300,'width':180, 'height':20, 'collide_bottom':False},
+                {'x': 3500, 'y':400,'width':150, 'height':20, 'collide_bottom':True},
+            ],
+            'enemies': [
+                {'x': 500,  'y':500,'speed':3,'patrol_width':200,'killable':True},
+                {'x': 1100, 'y':500,'speed':2,'patrol_width':150,'killable':False},
+                {'x': 1900, 'y':500,'speed':3,'patrol_width':100,'killable':True},
+                {'x': 2600, 'y':500,'speed':2,'patrol_width':200,'killable':False},
+                {'x': 3300, 'y':500,'speed':3,'patrol_width':150,'killable':True},
+            ]
+        },
+        {
+            'world_w': W * 6,
+            'platforms': [
+                {'x': 0,    'y':550,'width':W*6,'height':50, 'collide_bottom':True},
+                {'x': 400,  'y':450,'width':120, 'height':20, 'collide_bottom':False},
+                {'x': 900,  'y':400,'width':160, 'height':20, 'collide_bottom':True},
+                {'x': 1600, 'y':350,'width':220, 'height':20, 'collide_bottom':False},
+                {'x': 2300, 'y':450,'width':140, 'height':20, 'collide_bottom':True},
+                {'x': 3200, 'y':300,'width':200, 'height':20, 'collide_bottom':False},
+                {'x': 4000, 'y':400,'width':170, 'height':20, 'collide_bottom':True},
+            ],
+            'enemies': [
+                {'x': 600,  'y':500,'speed':4,'patrol_width':250,'killable':True},
+                {'x': 1200, 'y':500,'speed':3,'patrol_width':180,'killable':False},
+                {'x': 2000, 'y':500,'speed':4,'patrol_width':120,'killable':True},
+                {'x': 2800, 'y':500,'speed':3,'patrol_width':250,'killable':False},
+                {'x': 3500, 'y':500,'speed':4,'patrol_width':180,'killable':True},
+            ]
+        }
+    ]
+
+    def spawn_phase(idx):
+        cfg = phases[idx]
+        world_w = cfg['world_w']  
+        lvl = Level(cfg['platforms'], cfg['enemies'])
+        ply = Player(player_spawn[0], player_spawn[1], lives=3, world_width = world_w)
+        finish = Rect(cfg['world_w'] - 50, 500, 50, 50)
+        return lvl, ply, finish
 
     # — Estado inicial
+    current_phase = 0
+    level, player, finish_rect = spawn_phase(current_phase)
     state    = GameState.MAIN_MENU
     menu_idx = 0
-    level, player = None, None
 
-    MAIN_MENU_ITEMS = ["Start Game", "Quit"]
+    MAIN_MENU_ITEMS  = ["Start Game", "Quit"]
     PAUSE_MENU_ITEMS = ["Resume", "Main Menu"]
 
     # — Loop principal
@@ -100,9 +131,9 @@ def main():
                     menu_idx = (menu_idx + 1) % len(MAIN_MENU_ITEMS)
                 if ev.key == pygame.K_RETURN:
                     if menu_idx == 0:  # Start Game
-                        level, player = spawn_level_and_player()
-                        # inicializa score, timer e resultados
-                        score = 0
+                        current_phase = 0
+                        level, player, finish_rect = spawn_phase(current_phase)
+                        score = 100
                         start_ticks = pygame.time.get_ticks()
                         final_score = None
                         final_multiplier = 1.0
@@ -165,7 +196,7 @@ def main():
                         else:
                             # reset timer e score ao perder vida
                             start_ticks = pygame.time.get_ticks()
-                            score = 0
+                            score = 100
                             level.reset_enemies()
                             player.reset()
                     break
@@ -179,7 +210,16 @@ def main():
                     time_left = max(0, LEVEL_TIME_LIMIT - elapsed)
                     final_multiplier = 1 + (time_left / LEVEL_TIME_LIMIT)
                     final_score = int(score * final_multiplier)
-                state = GameState.VICTORY
+
+                # avança para a próxima fase ou vitória final
+                if current_phase + 1 < len(phases):
+                    current_phase += 1
+                    level, player, finish_rect = spawn_phase(current_phase)
+                    score = 100
+                    start_ticks = pygame.time.get_ticks()
+                    state = GameState.PLAYING
+                else:
+                    state = GameState.VICTORY
 
         # — Render por estado —
         if state == GameState.MAIN_MENU:
@@ -192,7 +232,7 @@ def main():
         elif state == GameState.PLAYING:
             screen.fill((100, 149, 237))
             cam_x = player.rect.centerx - W//2
-            cam_x = max(0, min(cam_x, world_w - W))
+            cam_x = max(0, min(cam_x, phases[current_phase]['world_w'] - W))
 
             # plataformas
             for plat in level.platforms:
@@ -236,7 +276,6 @@ def main():
         elif state == GameState.GAME_OVER:
             screen.fill((30, 30, 30))
             draw_text(screen, "GAME OVER", 72, 240, 150, (255,50,50))
-            # exibe cálculo de pontuação
             draw_text(screen,
                       f"{score} * {final_multiplier:.2f} = {final_score}",
                       36, 220, 260)
@@ -249,7 +288,6 @@ def main():
         elif state == GameState.VICTORY:
             screen.fill((30, 30, 30))
             draw_text(screen, "YOU WIN!", 72, 280, 150, (50,255,50))
-            # exibe cálculo de pontuação
             draw_text(screen,
                       f"{score} * {final_multiplier:.2f} = {final_score}",
                       36, 220, 260)

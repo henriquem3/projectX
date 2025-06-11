@@ -4,7 +4,7 @@ import pygame
 
 class Player:
     def __init__(self, x, y, width=50, height=50,
-                 speed=5, jump_strength=14, lives=3):
+                 speed=5, jump_strength=14, lives=3, world_width = 0):
         # posição inicial para respawn
         self.initial_x = x
         self.initial_y = y
@@ -21,6 +21,9 @@ class Player:
 
         # vidas
         self.lives = lives
+
+        #largura do mundo
+        self.world_width = world_width
 
     def handle_input(self):
         keys = pygame.key.get_pressed()
@@ -79,8 +82,8 @@ class Player:
         # Mantém player dentro da largura da tela (0 a 800)
         if self.rect.left < 0:
             self.rect.left = 0
-        if self.rect.right > 4000:
-            self.rect.right = 4000
+        if self.rect.right > self.world_width:
+            self.rect.right = self.world_width
 
         self.apply_gravity(platforms)
 
